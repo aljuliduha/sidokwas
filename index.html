@@ -9,7 +9,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="SIDOKWAS NISEL">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="ikon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="ikon-512.png">
@@ -55,9 +54,17 @@
   <footer>Gunakan Akun Google yang telah didaftarkan Sekretariat.</footer>
 </div>
 <script>
-var S = String.fromCharCode(47);
-var ALAMAT = "https:" + S + S + "script.google.com" + S + "macros" + S + "s" + S
-  + "AKfycbymwQqOmIf8w1ZcXLGzB2vRqYTdzrqocO_6pgfH4KCkvtDK5yiOhxgcsKYOidmKHzX9GQ" + S + "exec";
+/* ===================================================================
+   SATU-SATUNYA BARIS YANG PERLU DIUBAH ADA DI BAWAH INI.
+   Ganti alamat di dalam tanda kutip dengan URL aplikasi web Anda,
+   yang disalin dari Apps Script:
+   Terapkan  >  Kelola deployment  >  salin "URL aplikasi web".
+   Alamatnya harus diawali https dan diakhiri /exec
+   =================================================================== */
+
+var ALAMAT = "https://script.google.com/macros/s/GANTI_DENGAN_ID_DEPLOYMENT_ANDA/exec";
+
+/* =============== di bawah ini tidak perlu diubah =============== */
 
 document.getElementById("buka").href = ALAMAT;
 
@@ -65,13 +72,17 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch(function () {});
 }
 
-var langsung = true;
-try { langsung = new URL(location.href).searchParams.get("tunggu") !== "1"; } catch (e) {}
+var belumDiisi = ALAMAT.indexOf("GANTI_DENGAN") >= 0;
+var tunggu = false;
+try { tunggu = new URL(location.href).searchParams.get("tunggu") === "1"; } catch (e) {}
 
-if (langsung) {
-  setTimeout(function () { location.href = ALAMAT; }, 900);
-} else {
+if (belumDiisi) {
+  document.getElementById("status").textContent =
+    "Alamat aplikasi belum diisi pada berkas index.html.";
+} else if (tunggu) {
   document.getElementById("status").textContent = "Ketuk tombol di atas untuk membuka aplikasi.";
+} else {
+  setTimeout(function () { location.href = ALAMAT; }, 900);
 }
 </script>
 </body>
