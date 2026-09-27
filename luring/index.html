@@ -56,8 +56,9 @@ details summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600
     <label>Hasil pengawasan <select id="Hasil_Pengawasan">
       <option>Tidak ditemukan dugaan pelanggaran</option><option>Ditemukan dugaan pelanggaran</option><option>Saran perbaikan disampaikan</option></select></label>
     <label>Uraian singkat <textarea id="Uraian" placeholder="Apa yang diawasi, di mana, dan apa yang ditemukan"></textarea></label>
-    <label>Foto dokumen / kegiatan <input id="Foto" type="file" accept="image/*" capture="environment"></label>
-    <img class="pratinjau" id="pratinjau" hidden alt="Pratinjau foto">
+    <label>Lampiran &mdash; foto atau berkas PDF <input id="Foto" type="file" accept="application/pdf,image/*"></label>
+    <p class="muted" id="namaBerkas" style="margin:-4px 0 10px;font-size:12.5px"></p>
+    <img class="pratinjau" id="pratinjau" hidden alt="Pratinjau lampiran">
     <button class="btn primary" type="submit">Simpan catatan</button>
     <p class="muted" style="margin:10px 0 0">Catatan disimpan di HP ini dulu, lalu terkirim sendiri ke SIDOKWAS begitu ada sinyal.</p>
   </form>
@@ -96,10 +97,33 @@ $("#simpanSet").onclick = e => { e.preventDefault(); simpanLokal("set", { url: $
 
 let antre = bacaLokal("antre", []);
 let foto = null;
+const BATAS_PDF = 2 * 1024 * 1024;
+const ukuranTeks = n => { n = +n || 0; return n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1) + " MB"; };
+function bacaBerkas(file) {
+  return new Promise(ok => {
+    const fr = new FileReader();
+    fr.onload = () => ok({ nama: file.name, mime: file.type || "application/pdf", dataUrl: "", base64: String(fr.result).split(",")[1] });
+    fr.readAsDataURL(file);
+  });
+}
+function lepasLampiran(inp) { foto = null; inp.value = ""; $("#pratinjau").hidden = true; $("#namaBerkas").textContent = ""; }
 $("#Foto").onchange = async e => {
-  const f = e.target.files[0]; if (!f) { foto = null; $("#pratinjau").hidden = true; return; }
+  const inp = e.target, f = inp.files[0];
+  $("#namaBerkas").textContent = "";
+  if (!f) { lepasLampiran(inp); return; }
+  const adalahGambar = String(f.type || "").indexOf("image/") === 0;
+  const adalahPdf = /pdf/i.test(f.type || "") || /\.pdf$/i.test(f.name || "");
+  if (!adalahGambar && !adalahPdf) { lepasLampiran(inp); pesan("Hanya foto atau berkas PDF yang dapat dilampirkan."); return; }
+  if (adalahPdf) {
+    if (f.size > BATAS_PDF) { lepasLampiran(inp); pesan("Berkas PDF " + ukuranTeks(f.size) + " terlalu besar. Batasnya 2 MB — pindai ulang dengan mode abu-abu 200 dpi."); return; }
+    foto = await bacaBerkas(f);
+    $("#pratinjau").hidden = true;
+    $("#namaBerkas").textContent = "Terlampir: " + f.name + " \u00b7 " + ukuranTeks(f.size);
+    return;
+  }
   foto = await kecilkan(f);
   $("#pratinjau").src = foto.dataUrl; $("#pratinjau").hidden = false;
+  $("#namaBerkas").textContent = "Foto " + ukuranTeks(f.size) + " dikecilkan menjadi " + ukuranTeks(Math.round(foto.base64.length * 3 / 4));
 };
 function kecilkan(file) { // perkecil foto agar hemat kuota dan cepat terkirim
   return new Promise(ok => {
@@ -127,13 +151,13 @@ $("#frm").onsubmit = e => {
   if (foto) { d.namaFile = foto.nama; d.mime = foto.mime; d.base64 = foto.base64; }
   antre.push({ id: Date.now(), jejak: jejakBaru(), data: d, status: "antre", pesan: "" });
   simpanLokal("antre", antre); simpanLokal("kec", d.Kecamatan);
-  $("#Uraian").value = ""; $("#No_Dokumen").value = ""; $("#Foto").value = ""; $("#pratinjau").hidden = true; foto = null;
+  $("#Uraian").value = ""; $("#No_Dokumen").value = ""; $("#Foto").value = ""; $("#pratinjau").hidden = true; $("#namaBerkas").textContent = ""; foto = null;
   gambar(); pesan("Catatan masuk antrean."); kirimSemua();
 };
 function gambar() {
   $("#jml").textContent = antre.length;
   $("#antrean").innerHTML = antre.length ? antre.map(a => `<div class="item"><div style="flex:1"><b>${a.data.Jenis_Dokumen}</b>
-    <small>${a.data.Kecamatan} · ${a.data.Tanggal}${a.data.base64 ? " · dengan foto" : ""}</small>
+    <small>${a.data.Kecamatan} · ${a.data.Tanggal}${a.data.base64 ? " · dengan lampiran" : ""}</small>
     ${a.pesan ? `<small style="color:var(--crit)">${a.pesan}</small>` : ""}</div>
     <span class="tag ${a.status}">${a.status === "antre" ? "menunggu" : a.status === "proses" ? "mengirim…" : a.status === "kirim" ? "terkirim" : "gagal"}</span></div>`).join("")
     : `<p class="muted">Belum ada catatan dalam antrean.</p>`;
