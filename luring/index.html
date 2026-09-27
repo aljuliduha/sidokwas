@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SIDOKWAS Luring</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1D5C57">
+<style>
+:root{--paper:#F2F4F2;--surface:#fff;--sunk:#E8ECE9;--ink:#15212A;--muted:#566770;--line:#D3DBD7;--accent:#9B2527;--teal:#1D5C57;--ok:#23704A;--warn:#A5660C;--crit:#B3261E;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--paper:#0E1517;--surface:#162125;--sunk:#1C2A2F;--ink:#E4EBE9;--muted:#96A7AA;--line:#2A3A3F;--accent:#E06A6C;--teal:#63B5AA;--ok:#5DC08C;--warn:#E3A546;--crit:#F0746B;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:0 0 env(safe-area-inset-bottom,0px)}
+header{background:var(--teal);color:#fff;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px}
+header b{font-size:19px;display:block;letter-spacing:.01em}
+header span{font-size:12.5px;opacity:.9}
+main{padding:16px;max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+h2{font-size:15px;margin:0 0 10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:10px}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:15px}
+textarea{min-height:64px;resize:vertical}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:10px 14px;border-radius:9px;font-weight:600;font-size:15px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;width:100%}
+.btn.teal{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.sm{padding:5px 10px;font-size:13px;font-weight:500}
+.status{display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 12px;border-radius:9px;background:var(--sunk);color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.on .dot{background:var(--ok)} .off .dot{background:var(--warn)}
+.item{border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:8px;font-size:13.5px;display:flex;gap:10px;align-items:flex-start}
+.item small{color:var(--muted);display:block}
+.tag{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:99px;white-space:nowrap}
+.tag.antre{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.tag.kirim{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.tag.gagal{background:color-mix(in srgb,var(--crit) 15%,transparent);color:var(--crit)}
+.muted{color:var(--muted);font-size:12.5px}
+img.pratinjau{max-width:100%;border-radius:8px;margin-top:6px}
+details summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600}
+</style>
+</head>
+<body>
+<header><b>SIDOKWAS · Input Luring</b><span>Pengawasan Pemilu — Bawaslu Kab. Nias Selatan</span></header>
+<main>
+  <div class="status" id="status"><span class="dot"></span><span id="statusTeks">Memeriksa sambungan…</span></div>
+
+  <form class="card" id="frm">
+    <h2>Catatan hasil pengawasan</h2>
+    <label>Kecamatan <select id="Kecamatan" required></select></label>
+    <label>Jenis dokumen <select id="Jenis_Dokumen" required></select></label>
+    <label>Nomor dokumen <input id="No_Dokumen" placeholder="mis. PW.02/2026/0123"></label>
+    <label>Tanggal <input id="Tanggal" type="date" required></label>
+    <label>Pemilu / Pemilihan <select id="Rezim"><option>Pemilu</option><option>Pemilihan</option></select></label>
+    <label>Tahapan <select id="Tahapan"></select></label>
+    <label>Nama pengawas <input id="Pengawas" placeholder="mis. Panwaslu Kec. Teluk Dalam"></label>
+    <label>Hasil pengawasan <select id="Hasil_Pengawasan">
+      <option>Tidak ditemukan dugaan pelanggaran</option><option>Ditemukan dugaan pelanggaran</option><option>Saran perbaikan disampaikan</option></select></label>
+    <label>Uraian singkat <textarea id="Uraian" placeholder="Apa yang diawasi, di mana, dan apa yang ditemukan"></textarea></label>
+    <label>Foto dokumen / kegiatan <input id="Foto" type="file" accept="image/*" capture="environment"></label>
+    <img class="pratinjau" id="pratinjau" hidden alt="Pratinjau foto">
+    <button class="btn primary" type="submit">Simpan catatan</button>
+    <p class="muted" style="margin:10px 0 0">Catatan disimpan di HP ini dulu, lalu terkirim sendiri ke SIDOKWAS begitu ada sinyal.</p>
+  </form>
+
+  <div class="card">
+    <h2>Antrean kiriman (<span id="jml">0</span>)</h2>
+    <div id="antrean"></div>
+    <button class="btn teal" id="kirim" style="width:100%">Kirim sekarang</button>
+  </div>
+
+  <details class="card">
+    <summary>Pengaturan sambungan</summary>
+    <p class="muted">Diisi sekali oleh Tim Teknis Aplikasi. Minta alamat dan token kepada Admin SIDOKWAS.</p>
+    <label>Alamat web app (…/exec) <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec"></label>
+    <label>Token <input id="token" placeholder="token dari Admin"></label>
+    <label>Email Anda <input id="email" type="email" placeholder="nama@contoh.id"></label>
+    <button class="btn" id="simpanSet">Simpan pengaturan</button>
+  </details>
+</main>
+<script>
+const KEC = ["Amandraya","Aramo","Boronadu","Fanayama","Gomo","Hibala","Hilimegai","Hilisalawa'ahe","Huruna","Idanotae","Lahusa","Lolomatua","Lolowau","Luahagundre Maniamolo","Maniamolo","Mazino","Mazo","O'o'u","Onohazumba","Onolalu","Pulau-Pulau Batu","Pulau-Pulau Batu Barat","Pulau-Pulau Batu Timur","Pulau-Pulau Batu Utara","Sidua'ori","Simuk","Somambawa","Susua","Tanah Masa","Teluk Dalam","Toma","Ulu Idanotae","Ulunoyo","Ulususua","Umbunasi"];
+const JENIS = ["Laporan Hasil Pengawasan (Form A)","Surat Tugas Pengawasan","Surat Imbauan / Saran Perbaikan","Dokumentasi Pengawasan (foto/video)","Laporan Akhir Pengawasan Tahapan"];
+const TAHAPAN = {Pemilu:["Pemutakhiran Data Pemilih","Verifikasi Partai Politik","Pencalonan Anggota DPRD","Kampanye","Masa Tenang","Pemungutan dan Penghitungan Suara","Rekapitulasi Hasil","Penetapan Hasil"],
+  Pemilihan:["Pembentukan Badan Ad Hoc","Pemutakhiran Data Pemilih","Pencalonan Bupati dan Wakil Bupati","Kampanye","Masa Tenang","Pemungutan dan Penghitungan Suara","Rekapitulasi Hasil","Penetapan Pasangan Calon Terpilih"]};
+const $ = s => document.querySelector(s);
+const simpanLokal = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const bacaLokal = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const isi = (el, arr) => el.innerHTML = arr.map(x => `<option>${x}</option>`).join("");
+isi($("#Kecamatan"), KEC); isi($("#Jenis_Dokumen"), JENIS); isi($("#Tahapan"), TAHAPAN.Pemilu);
+$("#Rezim").onchange = e => isi($("#Tahapan"), TAHAPAN[e.target.value]);
+$("#Tanggal").value = new Date().toISOString().slice(0, 10);
+const set = bacaLokal("set", {});
+["url", "token", "email"].forEach(k => $("#" + k).value = set[k] || "");
+const kec = bacaLokal("kec", ""); if (kec) $("#Kecamatan").value = kec;
+$("#simpanSet").onclick = e => { e.preventDefault(); simpanLokal("set", { url: $("#url").value.trim(), token: $("#token").value.trim(), email: $("#email").value.trim() }); pesan("Pengaturan disimpan."); };
+
+let antre = bacaLokal("antre", []);
+let foto = null;
+$("#Foto").onchange = async e => {
+  const f = e.target.files[0]; if (!f) { foto = null; $("#pratinjau").hidden = true; return; }
+  foto = await kecilkan(f);
+  $("#pratinjau").src = foto.dataUrl; $("#pratinjau").hidden = false;
+};
+function kecilkan(file) { // perkecil foto agar hemat kuota dan cepat terkirim
+  return new Promise(ok => {
+    const img = new Image(), fr = new FileReader();
+    fr.onload = () => { img.onload = () => {
+      const maks = 1400, s = Math.min(1, maks / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = img.width * s; c.height = img.height * s;
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL("image/jpeg", 0.68);
+      ok({ nama: file.name.replace(/\.[^.]+$/, "") + ".jpg", mime: "image/jpeg", dataUrl, base64: dataUrl.split(",")[1] });
+    }; img.src = fr.result; };
+    fr.readAsDataURL(file);
+  });
+}
+$("#frm").onsubmit = e => {
+  e.preventDefault();
+  const d = {};
+  ["Kecamatan", "Jenis_Dokumen", "No_Dokumen", "Tanggal", "Rezim", "Tahapan", "Pengawas", "Hasil_Pengawasan", "Uraian"].forEach(k => d[k] = $("#" + k).value.trim());
+  d.Email = (bacaLokal("set", {}).email) || "";
+  if (foto) { d.namaFile = foto.nama; d.mime = foto.mime; d.base64 = foto.base64; }
+  antre.push({ id: Date.now(), data: d, status: "antre", pesan: "" });
+  simpanLokal("antre", antre); simpanLokal("kec", d.Kecamatan);
+  $("#Uraian").value = ""; $("#No_Dokumen").value = ""; $("#Foto").value = ""; $("#pratinjau").hidden = true; foto = null;
+  gambar(); pesan("Catatan masuk antrean."); kirimSemua();
+};
+function gambar() {
+  $("#jml").textContent = antre.length;
+  $("#antrean").innerHTML = antre.length ? antre.map(a => `<div class="item"><div style="flex:1"><b>${a.data.Jenis_Dokumen}</b>
+    <small>${a.data.Kecamatan} · ${a.data.Tanggal}${a.data.base64 ? " · dengan foto" : ""}</small>
+    ${a.pesan ? `<small style="color:var(--crit)">${a.pesan}</small>` : ""}</div>
+    <span class="tag ${a.status}">${a.status === "antre" ? "menunggu" : a.status === "kirim" ? "terkirim" : "gagal"}</span></div>`).join("")
+    : `<p class="muted">Belum ada catatan dalam antrean.</p>`;
+}
+function pesan(t) { const s = $("#statusTeks"); const lama = s.textContent; s.textContent = t; setTimeout(() => sambungan(), 2200); }
+function sambungan() {
+  const st = $("#status"), ada = navigator.onLine, sisa = antre.filter(a => a.status !== "kirim").length;
+  st.className = "status " + (ada ? "on" : "off");
+  $("#statusTeks").textContent = ada ? (sisa ? sisa + " catatan menunggu dikirim" : "Tersambung. Semua catatan sudah terkirim.") : "Tanpa sinyal — catatan disimpan di HP ini.";
+}
+async function kirimSemua() {
+  const s = bacaLokal("set", {});
+  if (!navigator.onLine) return sambungan();
+  if (!s.url || !s.token) { pesan("Alamat atau token belum diisi pada Pengaturan."); return; }
+  for (const a of antre) {
+    if (a.status === "kirim") continue;
+    try {
+      const res = await fetch(s.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ token: s.token, data: a.data }) });
+      const j = await res.json();
+      if (j.ok) { a.status = "kirim"; a.pesan = ""; delete a.data.base64; } else { a.status = "gagal"; a.pesan = j.pesan || "ditolak server"; }
+    } catch (err) { a.status = "gagal"; a.pesan = "gagal terkirim, akan dicoba lagi"; }
+  }
+  antre = antre.filter(a => a.status !== "kirim" || Date.now() - a.id < 864e5); // simpan riwayat 1 hari
+  simpanLokal("antre", antre); gambar(); sambungan();
+}
+$("#kirim").onclick = kirimSemua;
+addEventListener("online", kirimSemua); addEventListener("offline", sambungan);
+gambar(); sambungan(); kirimSemua();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
