@@ -114,13 +114,18 @@ function kecilkan(file) { // perkecil foto agar hemat kuota dan cepat terkirim
     fr.readAsDataURL(file);
   });
 }
+let sedangSimpan = false;
+const jejakBaru = () => "L" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 $("#frm").onsubmit = e => {
   e.preventDefault();
+  if (sedangSimpan) return;
+  sedangSimpan = true;
+  setTimeout(() => { sedangSimpan = false; }, 1500);
   const d = {};
   ["Kecamatan", "Jenis_Dokumen", "No_Dokumen", "Tanggal", "Rezim", "Tahapan", "Pengawas", "Hasil_Pengawasan", "Uraian"].forEach(k => d[k] = $("#" + k).value.trim());
   d.Email = (bacaLokal("set", {}).email) || "";
   if (foto) { d.namaFile = foto.nama; d.mime = foto.mime; d.base64 = foto.base64; }
-  antre.push({ id: Date.now(), data: d, status: "antre", pesan: "" });
+  antre.push({ id: Date.now(), jejak: jejakBaru(), data: d, status: "antre", pesan: "" });
   simpanLokal("antre", antre); simpanLokal("kec", d.Kecamatan);
   $("#Uraian").value = ""; $("#No_Dokumen").value = ""; $("#Foto").value = ""; $("#pratinjau").hidden = true; foto = null;
   gambar(); pesan("Catatan masuk antrean."); kirimSemua();
@@ -130,7 +135,7 @@ function gambar() {
   $("#antrean").innerHTML = antre.length ? antre.map(a => `<div class="item"><div style="flex:1"><b>${a.data.Jenis_Dokumen}</b>
     <small>${a.data.Kecamatan} · ${a.data.Tanggal}${a.data.base64 ? " · dengan foto" : ""}</small>
     ${a.pesan ? `<small style="color:var(--crit)">${a.pesan}</small>` : ""}</div>
-    <span class="tag ${a.status}">${a.status === "antre" ? "menunggu" : a.status === "kirim" ? "terkirim" : "gagal"}</span></div>`).join("")
+    <span class="tag ${a.status}">${a.status === "antre" ? "menunggu" : a.status === "proses" ? "mengirim…" : a.status === "kirim" ? "terkirim" : "gagal"}</span></div>`).join("")
     : `<p class="muted">Belum ada catatan dalam antrean.</p>`;
 }
 function pesan(t) { const s = $("#statusTeks"); const lama = s.textContent; s.textContent = t; setTimeout(() => sambungan(), 2200); }
@@ -139,18 +144,27 @@ function sambungan() {
   st.className = "status " + (ada ? "on" : "off");
   $("#statusTeks").textContent = ada ? (sisa ? sisa + " catatan menunggu dikirim" : "Tersambung. Semua catatan sudah terkirim.") : "Tanpa sinyal — catatan disimpan di HP ini.";
 }
+let sedangKirim = false;
 async function kirimSemua() {
+  if (sedangKirim) return;                 // cegah dua proses kirim berjalan bersamaan
   const s = bacaLokal("set", {});
   if (!navigator.onLine) return sambungan();
   if (!s.url || !s.token) { pesan("Alamat atau token belum diisi pada Pengaturan."); return; }
+  sedangKirim = true;
+  try {
   for (const a of antre) {
-    if (a.status === "kirim") continue;
+    if (a.status === "kirim" || a.status === "proses") continue;
+    if (!a.jejak) a.jejak = jejakBaru();   // catatan lama yang belum punya jejak
+    a.status = "proses";                   // dikunci sebelum menunggu jawaban
+    gambar();
     try {
-      const res = await fetch(s.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ token: s.token, data: a.data }) });
+      const res = await fetch(s.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ token: s.token, jejak: a.jejak, data: a.data }) });
       const j = await res.json();
       if (j.ok) { a.status = "kirim"; a.pesan = ""; delete a.data.base64; } else { a.status = "gagal"; a.pesan = j.pesan || "ditolak server"; }
     } catch (err) { a.status = "gagal"; a.pesan = "gagal terkirim, akan dicoba lagi"; }
+    simpanLokal("antre", antre);
   }
+  } finally { sedangKirim = false; }
   antre = antre.filter(a => a.status !== "kirim" || Date.now() - a.id < 864e5); // simpan riwayat 1 hari
   simpanLokal("antre", antre); gambar(); sambungan();
 }
